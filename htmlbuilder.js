@@ -100,8 +100,10 @@ const htmlBuilder = (f) => {
   const pop = (elementName) => {
     const last = stack.pop();
 
-    if (last.elementName !== elementName) {
-      throw new Error('Unclosed Element');
+    if (elementName.slice(1) !== last.elementName) {
+      throw new Error(`
+        Unclosed Element expected ${last.elementName},
+        Got ${elementName.slice(1)}`);
     } else {
       previousElement().children.push(last);
     }
@@ -127,8 +129,8 @@ const htmlBuilder = (f) => {
         if (context[n]) {
           return context[n];
         }
-        if (n[0] === 'e') {
-          pop(n.slice(1));
+        if (n[0] === '_') {
+          pop(n);
         } else {
           return push(n);
         }
@@ -144,44 +146,52 @@ const htmlBuilder = (f) => {
 // automatically inserts semi-colons. This means we don't make to
 // delimit out words. Rather the engine sees each line as as statement,
 // with a single expression.
-// 
+
+// Syntax:
+// name            : Start new tag
+// name.key = val  : Sets the attribute 'key' to 'val' on a node
+// $               : Previous object. Used to chain attribute assignments
+// _name           : Closes a tag
+// text`string`    : Outputs raw string
+
 const pageTemplate = htmlBuilder(() => {
   html
     head
       title
+        // We can handle string interpolations and parameters
         text`Yo! This is the ${$title}`
-      etitle
-    ehead
+      _title
+    _head
     body
+      // This is now attribute assignment could look
       h1.class='foo'
        $.style='font-size: 42px'
        $.someThingElse='foo'
         text`heading of body`
-      eh1
+      _h1
+
       p.style='color: red'
         text`Hi ${$name}`
-      ep
-      // Loops are simple looping over it like normal
+      _p
+
+      // Loops are simple, loop over input like normal
       $people.forEach(person => {
+
         p.style='color: blue'
           text`Yo ${person}`
-        ep
+        _p
+
       })
-    ebody
-  ehtml
+    _body
+  _html
 });
 
 console.info(pageTemplate({
   $title: 'Site Title',
   $name: 'Jan',
   $people: [
-    'Søren',
-    'Klaus',
-    'Aksana',
+    'Someone',
+    'Here',
+    'People?',
   ]
-}));
-console.info(pageTemplate({
-  $title: 'Another Title',
-  $name: 'Jørn',
-  $people: []
 }));
