@@ -17,15 +17,20 @@
  * the nature of the change.
  */
 
+const primitiveConstructors = new Set();
+primitiveConstructors.add(RegExp);
+primitiveConstructors.add(Symbol);
 
 const isPrimitive = f =>
   f === null || f === undefined ||
   typeof f === 'string' ||
   typeof f === 'number' ||
   typeof f === 'boolean' ||
+  typeof f === '' ||
   f instanceof Number ||
   f instanceof String ||
-  f instanceof Boolean;
+  f instanceof Boolean ||
+  f.constructor && primitiveConstructors.has(f.constructor)
 
 const API_KEY = Symbol('api');
 
@@ -181,9 +186,11 @@ const trackObject = (obj, config) => {
         return getValue(fieldName);
       },
       get: (t, fieldName) => {
-        if (fieldName.constructor === Symbol) {
+        if (fieldName.constructor === Symbol &&
+           !childProxies[fieldName]) {
           return obj[fieldName];
         }
+
         if (typeof obj[fieldName] === 'function') {
           return obj[fieldName];
         }
@@ -216,9 +223,4 @@ const trackObjectChanges = (obj, trackReads=false) => trackObject(
   { ... ROOT_CONFIG, trackReads },
 );
 
-const { api, object } = trackObjectChanges({foo: 42, bar:{x:{y:2}}}, true);
-console.log(object.bar);
-object.foo = 2;
-console.log(api.observeChanges());
-console.log(api.observeReads());
 module.exports = trackObjectChanges;
