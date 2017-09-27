@@ -15,22 +15,21 @@
  *
  * Mutations from the set/delete functions are handed depending on
  * the nature of the change.
+ *
+ * Does not support Maps or Sets as of yet.
  */
 
-const primitiveConstructors = new Set();
-primitiveConstructors.add(RegExp);
-primitiveConstructors.add(Symbol);
-
 const isPrimitive = f =>
-  f === null || f === undefined ||
+  f === null ||
+  f === undefined ||
   typeof f === 'string' ||
   typeof f === 'number' ||
   typeof f === 'boolean' ||
-  typeof f === '' ||
+  typeof f === 'function' ||
   f instanceof Number ||
   f instanceof String ||
   f instanceof Boolean ||
-  f.constructor && primitiveConstructors.has(f.constructor)
+  f.constructor && f.constructor === Symbol;
 
 const API_KEY = Symbol('api');
 
@@ -59,7 +58,8 @@ const pathBuffer = () => {
   }
 }
 
-
+const isSpecialContainer = (value) => {
+}
 
 const trackObject = (obj, config) => {
   const path = config.path || pathBuffer();
@@ -112,8 +112,11 @@ const trackObject = (obj, config) => {
     for (let i = 0; i < keys.length; i++) {
       registerChangeListenerOnField(keys[i], obj[keys[i]]);
     }
+    const symbols = Object.getOwnPropertySymbols(obj);
+    for (let i = 0; i < keys.length; i++) {
+      registerChangeListenerOnField(symbols[i], obj[symbols[i]]);
+    }
   }
-
 
   const getValue = (fieldName) => {
     return childProxies[fieldName] || obj[fieldName];
@@ -134,9 +137,9 @@ const trackObject = (obj, config) => {
       path.addPathPart('root');
     }
     if (Array.isArray(obj[fieldName])){
-      path.addPathPart('[' + fieldName + ']');
+      path.addPathPart('[' + fieldName.toString() + ']');
     } else {
-      path.addPathPart('.' + fieldName);
+      path.addPathPart('.' + fieldName.toString());
     }
   }
 
@@ -195,6 +198,7 @@ const trackObject = (obj, config) => {
           return obj[fieldName];
         }
 
+
         rememberPath(fieldName);
 
         if (childProxies[fieldName]) {
@@ -222,5 +226,7 @@ const trackObjectChanges = (obj, trackReads=false) => trackObject(
   obj,
   { ... ROOT_CONFIG, trackReads },
 );
+
+
 
 module.exports = trackObjectChanges;
